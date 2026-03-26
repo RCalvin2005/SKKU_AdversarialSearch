@@ -79,6 +79,47 @@ class Game:
             print("| " + " | ".join(cell.mark for cell in row) + " |")
             print("+" + "---+"*Game.GRID_SIZE)
 
+    def display_cell_val(self):
+        """
+        Prints out the current grid with all the cell values.
+        Top left:       n-in-a-row
+        Top centre:     centre proximity
+        Top right:      n-in-a-column
+        Bottom left:    n-in-downward-diagonal
+        Bottom centre:  total value
+        Bottom right:   n-in-upward-diagonal     
+        Example:    
+        +---------+
+        |1   1   1|
+        |    X    |
+        |1  +11  1|
+        +---------+
+        """
+        print("+" + "---------+"*Game.GRID_SIZE)
+        for row in self.grid:
+            line1 = "|"
+            line2 = "|"
+            line3 = "|"
+            for cell in row:
+                line1 += f"{cell.horz_ptr[0]}   {cell.centre_prox}   {cell.vert_ptr[0]}|"
+                line2 += f"    {cell.mark}    |"
+                line3 += f"{cell.down_diag_ptr[0]} "
+                # Print formatting and colours reference:
+                # https://www.w3schools.com/python/python_string_formatting.asp
+                # https://www.geeksforgeeks.org/python/print-colors-python-terminal/
+                val = cell.get_value()
+                if val > 0:
+                    line3 += f"\033[92m{val:+3}\033[0m"
+                elif val < 0:
+                    line3 += f"\033[91m{val:+3}\033[0m"
+                else:
+                    line3 += f"{val:+3}"
+                line3 += f"   {cell.up_diag_ptr[0]}|"
+            print(line1, line2, line3, sep="\n")
+            print("+" + "---------+"*Game.GRID_SIZE)
+
+        return
+
 class Cell:
     """
     A class representing a single cell and its value in the Tic-Tac-Toe grid.
@@ -133,11 +174,11 @@ class Cell:
             Returns positive value for X, negative value for O and 0 for no mark or otherwise.
         """
         if self.mark == "X":
-            return (self.horz_val + self.vert_val + self.down_diag_val + self.up_diag_val
-                    + self.centre_prox)
+            return (self.horz_ptr[0] + self.vert_ptr[0] + self.down_diag_ptr[0]
+                    + self.up_diag_ptr[0] + self.centre_prox)
         elif self.mark == "O":
-            return (self.horz_val + self.vert_val + self.down_diag_val + self.up_diag_val
-                    + self.centre_prox) * -1
+            return (self.horz_ptr[0] + self.vert_ptr[0] + self.down_diag_ptr[0]
+                    + self.up_diag_ptr[0] + self.centre_prox) * -1
         else:
             return 0
 
@@ -167,7 +208,7 @@ def main():
         print(f"Placing {move[2]} in row {move[0]}, col {move[1]}.")
         success = game.place(move[0], move[1], move[2])
         print()
-        game.display_grid()
+        game.display_cell_val()
         print()
         if success:
             print(f"Sucessfully placed {move[2]} in row {move[0]}, col {move[1]}.")
