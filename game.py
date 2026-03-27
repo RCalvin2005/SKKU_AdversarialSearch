@@ -6,7 +6,9 @@ class Game:
     ----------
     GRID_SIZE : int
         The size of the board to be played on: GRID_SIZE x GRID_SIZE.
-    CENTRE_PROX_VALS : list[list[float]]
+    WIN_N_IN_LINE : int
+        The required number of n-in-a-line marks to win the game. 
+    CENTRE_PROX_VALS : list[list[int]]
         An 2D array with the centre proximity values for each cell in the grid.
     grid : list[list[str]]
         A 2D array to store which marks have been placed in which cells.
@@ -15,10 +17,19 @@ class Game:
     -------
     place(row, col, mark)
         Places the mark in the specified (row, col) grid cell after checking validaty.
+    update_cell_vals()
+        Updates the n-in-line cell values of the current placed cell and adjacent cells.
+    is_winning_move()
+        Checks if the current move was a winning move.
+    get_state_val()
+        Calculates the game state value from the evaulutaion function.
     display_grid()
         Prints out the current state of the grid to terminal.
+    display_cell_val()
+        Prints out the current grid with all the cell values.
     """
     GRID_SIZE = 5
+    WIN_N_IN_LINE = 4
     CENTRE_PROX_VALS = [
         [1, 1, 1, 1, 1],
         [1, 2, 2, 2, 1],
@@ -36,6 +47,8 @@ class Game:
         # https://www.upgrad.com/tutorials/software-engineering/python-tutorial/2d-array-in-python/
         self.grid = [[Cell(Game.CENTRE_PROX_VALS[row][col]) for col in range(Game.GRID_SIZE)]
                      for row in range(Game.GRID_SIZE)]
+        
+        self.curr_move = {"row": 0, "col": 0, "mark": " "}
         
     def place(self, row, col, mark):
         """
@@ -68,8 +81,122 @@ class Game:
         
         # Save mark in row, col cell
         self.grid[row][col].mark = mark
+        self.curr_move = {"row": row, "col": col, "mark": mark}
         return True
     
+    def update_cell_vals(self):
+        """
+        Updates the n-in-line cell values of last placed cell and adjacent cells.
+        """
+        row = self.curr_move["row"]
+        col = self.curr_move["col"]
+        mark = self.curr_move["mark"]
+
+        # Update n-in-row values for left and right neighbours
+        left_horz_val = 0
+        if col - 1 >= 0:
+            left_cell = self.grid[row][col-1]
+            if left_cell.mark == mark:
+                left_horz_val = left_cell.horz_val
+
+        right_horz_val = 0
+        if col + 1 < Game.GRID_SIZE: 
+            right_cell = self.grid[row][col+1]
+            if right_cell.mark == mark:
+                right_horz_val = right_cell.horz_val
+
+        n_in_row = left_horz_val + 1 + right_horz_val
+        for i in range(-left_horz_val, right_horz_val + 1):
+            self.grid[row][col+i].horz_val = n_in_row
+
+        # Update n-in-column values for top and bottom neighbours
+        top_vert_val = 0
+        if row - 1 >= 0:
+            top_cell = self.grid[row-1][col]
+            if top_cell.mark == mark:
+                top_vert_val = top_cell.vert_val
+
+        bottom_vert_val = 0
+        if row + 1 < Game.GRID_SIZE: 
+            bottom_cell = self.grid[row+1][col]
+            if bottom_cell.mark == mark:
+                bottom_vert_val = bottom_cell.vert_val
+
+        n_in_col = top_vert_val + 1 + bottom_vert_val
+        for i in range(-top_vert_val, bottom_vert_val + 1):
+            self.grid[row+i][col].vert_val = n_in_col
+
+        # Update n-in-downward-diagonal values for top-left and bottom-right neighbour
+        top_left_diag_val = 0
+        if row - 1 >= 0 and col - 1 >= 0:
+            top_left_cell = self.grid[row-1][col-1]
+            if top_left_cell.mark == mark:
+                top_left_diag_val = top_left_cell.down_diag_val
+
+        bottom_right_diag_val = 0
+        if row + 1 < Game.GRID_SIZE and col + 1 < Game.GRID_SIZE: 
+            bottom_right = self.grid[row+1][col+1]
+            if bottom_right.mark == mark:
+                bottom_right_diag_val = bottom_right.down_diag_val
+
+        n_in_down_diag = top_left_diag_val + 1 + bottom_right_diag_val
+        for i in range(-top_left_diag_val, bottom_right_diag_val + 1):
+            self.grid[row+i][col+i].down_diag_val = n_in_down_diag
+
+        # Update n-in-upward-diagonal values for bottom-left and top-right neighbour
+        bottom_left_diag_val = 0
+        if row + 1 < Game.GRID_SIZE and col - 1 >= 0:
+            bottom_left_cell = self.grid[row+1][col-1]
+            if bottom_left_cell.mark == mark:
+                bottom_left_diag_val = bottom_left_cell.up_diag_val
+
+        top_right_diag_val = 0
+        if row - 1 >= 0 and col + 1 < Game.GRID_SIZE: 
+            top_right = self.grid[row-1][col+1]
+            if top_right.mark == mark:
+                top_right_diag_val = top_right.up_diag_val
+
+        n_in_up_diag = bottom_left_diag_val + 1 + top_right_diag_val
+        for i in range(-bottom_left_diag_val, top_right_diag_val + 1):
+            self.grid[row-i][col+i].up_diag_val = n_in_up_diag
+
+    def is_winning_move(self):
+        """
+        Checks if the current move was a winning move.
+
+        Returns
+        -------
+        bool
+            True if the last current was a winning move, False otherwise.
+        """
+        # Check if there is 4 in a row in any of the directions
+        curr_cell = self.grid[self.curr_move["row"]][self.curr_move["col"]]
+        if curr_cell.horz_val == Game.WIN_N_IN_LINE:
+            return True
+        if curr_cell.vert_val == Game.WIN_N_IN_LINE:
+            return True
+        if curr_cell.horz_val == Game.WIN_N_IN_LINE:
+            return True
+        if curr_cell.horz_val == Game.WIN_N_IN_LINE:
+            return True
+        return False
+    
+    def get_state_val(self):
+        """
+        Calculates the game state value from the evaulutaion function.
+        Evalutaion function: Centre proximity + all n-in-line values.
+
+        Returns
+        -------
+        int
+            Sum of all the grid cell values.
+        """
+        game_val = 0
+        for row in range(Game.GRID_SIZE):
+            for col in range(Game.GRID_SIZE):
+                game_val += self.grid[row][col].get_value()
+        return game_val
+
     def display_grid(self):
         """
         Prints out the current state of the grid to terminal.
@@ -101,9 +228,9 @@ class Game:
             line2 = "|"
             line3 = "|"
             for cell in row:
-                line1 += f"{cell.horz_ptr[0]}   {cell.centre_prox}   {cell.vert_ptr[0]}|"
+                line1 += f"{cell.horz_val}   {cell.centre_prox}   {cell.vert_val}|"
                 line2 += f"    {cell.mark}    |"
-                line3 += f"{cell.down_diag_ptr[0]} "
+                line3 += f"{cell.down_diag_val} "
                 # Print formatting and colours reference:
                 # https://www.w3schools.com/python/python_string_formatting.asp
                 # https://www.geeksforgeeks.org/python/print-colors-python-terminal/
@@ -114,7 +241,7 @@ class Game:
                     line3 += f"\033[91m{val:+3}\033[0m"
                 else:
                     line3 += f"{val:+3}"
-                line3 += f"   {cell.up_diag_ptr[0]}|"
+                line3 += f"   {cell.up_diag_val}|"
             print(line1, line2, line3, sep="\n")
             print("+" + "---------+"*Game.GRID_SIZE)
 
@@ -130,20 +257,14 @@ class Cell:
         The mark placed in the cell (X, O or " ").
     centre_prox: 
         Value of the cell from its proximity to the centre.
-    horz_ptr : list[float]
-        An array containing the value of the cell from n-in-a-row marks (-- direction).
-    vert_ptr : list[float]
-        An array containing the value of the cell from n-in-a-column marks ( | direction).
-    down_diag_ptr : list[float]
-        An array containing the value of the cell from n-in-downward-diagonal-line marks (\\ direction).
-    up_diag_ptr : list[float]
-        An array containing the value of the cell from n-in-upward-diagonal-line marks (/ direction).
-    
-    Notes
-    -----
-    Use of list[float] allows for shallow copy for easy sync with adjacent cells
-    (removing the need to implement a linked list or similar by passing the list by reference,
-    basically simulating pointer behaviour in C/C++).
+    horz_val : int
+        The value of the cell from n-in-a-row marks (-- direction).
+    vert_val : int
+        The value of the cell from n-in-a-column marks ( | direction).
+    down_diag_val : int
+        The value of the cell from n-in-downward-diagonal-line marks (\\ direction).
+    up_diag_val : int
+        The value of the cell from n-in-upward-diagonal-line marks (/ direction).
 
     Methods
     -------
@@ -158,10 +279,10 @@ class Cell:
         """
         self.mark = " "
         self.centre_prox = centre_prox
-        self.horz_ptr = [0]
-        self.vert_ptr = [0]
-        self.down_diag_ptr = [0]
-        self.up_diag_ptr = [0]
+        self.horz_val = 0
+        self.vert_val = 0
+        self.down_diag_val = 0
+        self.up_diag_val = 0
 
     def get_value(self):
         """
@@ -170,22 +291,22 @@ class Cell:
 
         Retruns
         -------
-        float
+        int
             Returns positive value for X, negative value for O and 0 for no mark or otherwise.
         """
         if self.mark == "X":
-            return (self.horz_ptr[0] + self.vert_ptr[0] + self.down_diag_ptr[0]
-                    + self.up_diag_ptr[0] + self.centre_prox)
+            return (self.horz_val + self.vert_val + self.down_diag_val + self.up_diag_val
+                    + self.centre_prox)
         elif self.mark == "O":
-            return (self.horz_ptr[0] + self.vert_ptr[0] + self.down_diag_ptr[0]
-                    + self.up_diag_ptr[0] + self.centre_prox) * -1
+            return (self.horz_val + self.vert_val + self.down_diag_val + self.up_diag_val
+                    + self.centre_prox) * -1
         else:
             return 0
 
 
 def main():
     """
-    Test code to place 10 marks on the grid
+    Test code to place 14 marks on the grid with the 12th move the winning move.
     """
     game = Game()
     
@@ -193,27 +314,41 @@ def main():
         [2, 2, "X"],
         [2, 2, "O"],
         [2, 5, "O"],
-        [2, 1, "O"],
+        [2, 3, "O"],
         [1, 2, "X"],
         [3, 2, "O"],
+        [1, 3, "X"],
+        [1, 4, "O"],
+        [4, 1, "X"],
+        [3, 1, "O"],
+        [1, 1, "X"],
+        [3, 3, "O"],
+        [3, 4, "X"],
+        [3, 0, "O"],
         [1, 0, "X"],
-        [1, 1, "O"],
-        [3, 1, "X"],
-        [1, 3, "O"],
-        [2, 3, "X"],
-        [4, 3, "O"]
+        [2, 1, "O"],
     ]
     
     for move in sequence:
         print(f"Placing {move[2]} in row {move[0]}, col {move[1]}.")
         success = game.place(move[0], move[1], move[2])
+        if (success):
+            game.update_cell_vals()
         print()
         game.display_cell_val()
         print()
+        
         if success:
             print(f"Sucessfully placed {move[2]} in row {move[0]}, col {move[1]}.")
         else: 
             print(f"Failed to place {move[2]} in row {move[0]}, col {move[1]}.")
+
+        print("Game state value:", game.get_state_val())
+
+        if game.is_winning_move():
+            print(f"Player {game.curr_move["mark"]} has won the game!")
+            return
+
         print("-"*75)
 
     return
