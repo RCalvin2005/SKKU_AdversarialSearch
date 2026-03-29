@@ -12,6 +12,12 @@ class Game:
         An 2D array with the centre proximity values for each cell in the grid.
     grid : list[list[str]]
         A 2D array to store which marks have been placed in which cells.
+    curr_move : dict[int, int, str]
+        A dictionary containing information of the current move: row, col, and mark.
+    empty_cell : list[tuple[int, int]]
+        An array containing the remaining empty (row, col) cells.
+    turn_num : int
+        The current turn number of the game.
     
     Methods
     -------
@@ -49,8 +55,13 @@ class Game:
                      for row in range(Game.GRID_SIZE)]
         
         self.curr_move = {"row": 0, "col": 0, "mark": " "}
+
+        self.empty_cells = [(row, col)
+                            for row in range(Game.GRID_SIZE) for col in range(Game.GRID_SIZE)]
         
-    def place(self, row, col, mark):
+        self.turn_num = 0
+        
+    def place(self, row, col, mark=None):
         """
         Places the mark in the specified (row, col) grid cell after checking validaty.
 
@@ -60,8 +71,8 @@ class Game:
             The row index of the target cell the mark is to be placed in.
         col : int
             The column index of the target cell the mark is to be placed in.
-        mark : str
-            The mark to be placed (X or O).
+        mark : str, optional
+            The mark to be placed (X or O). Selects mark based on turn number if not provided.
 
         Retruns
         -------
@@ -79,9 +90,21 @@ class Game:
         if self.grid[row][col].mark != " ":
             return False
         
+        # Get mark based on turn number if not provided
+        if (mark == None):
+            mark = "X" if self.turn_num % 2 == 0 else "O"
+
         # Save mark in row, col cell
         self.grid[row][col].mark = mark
         self.curr_move = {"row": row, "col": col, "mark": mark}
+
+        # Update game status
+        self.empty_cells.remove((row, col))
+        self.turn_num += 1
+
+        # Updates the cell values
+        self.update_cell_vals()
+
         return True
     
     def update_cell_vals(self):
@@ -169,17 +192,28 @@ class Game:
         bool
             True if the last current was a winning move, False otherwise.
         """
-        # Check if there is 4 in a row in any of the directions
+        # Check if there is at least 4 in a row in any of the directions
         curr_cell = self.grid[self.curr_move["row"]][self.curr_move["col"]]
-        if curr_cell.horz_val == Game.WIN_N_IN_LINE:
+        if curr_cell.horz_val >= Game.WIN_N_IN_LINE:
             return True
-        if curr_cell.vert_val == Game.WIN_N_IN_LINE:
+        if curr_cell.vert_val >= Game.WIN_N_IN_LINE:
             return True
-        if curr_cell.horz_val == Game.WIN_N_IN_LINE:
+        if curr_cell.down_diag_val >= Game.WIN_N_IN_LINE:
             return True
-        if curr_cell.horz_val == Game.WIN_N_IN_LINE:
+        if curr_cell.up_diag_val >= Game.WIN_N_IN_LINE:
             return True
         return False
+    
+    def is_over(self):
+        """
+        Checks if the game is over (no remaining empty cells).
+
+        Returns
+        -------
+        bool
+            Returns true is the game is over (no remaining empty cells).
+        """
+        return len(self.empty_cells) == 0
     
     def get_state_val(self):
         """
@@ -202,8 +236,19 @@ class Game:
         Prints out the current state of the grid to terminal.
         """
         print("+" + "---+"*Game.GRID_SIZE)
-        for row in self.grid:
-            print("| " + " | ".join(cell.mark for cell in row) + " |")
+        for row_num in range(len(self.grid)):
+            line = "|"
+            for col_num in range(len(self.grid[row_num])):
+                mark = self.grid[row_num][col_num].mark
+                if row_num == self.curr_move["row"] and col_num == self.curr_move["col"]:
+                    line += f" \033[93m{mark}\033[0m |"
+                elif mark == "X":
+                    line += f" \033[92m{mark}\033[0m |"
+                elif mark == "O":
+                    line += f" \033[91m{mark}\033[0m |"
+                else:
+                    line += f" {mark} |"
+            print(line)
             print("+" + "---+"*Game.GRID_SIZE)
 
     def display_cell_val(self):
@@ -332,8 +377,6 @@ def main():
     for move in sequence:
         print(f"Placing {move[2]} in row {move[0]}, col {move[1]}.")
         success = game.place(move[0], move[1], move[2])
-        if (success):
-            game.update_cell_vals()
         print()
         game.display_cell_val()
         print()
@@ -348,6 +391,8 @@ def main():
         if game.is_winning_move():
             print(f"Player {game.curr_move["mark"]} has won the game!")
             return
+        elif game.is_over():
+            print("Game ended in a draw!")
 
         print("-"*75)
 
