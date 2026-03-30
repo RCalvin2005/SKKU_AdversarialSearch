@@ -14,63 +14,9 @@ class AlphaBetaAgent():
         self.game = game
         self.mark = mark
 
-    def minimax(self, game: game.Game, depth, isMax):
+    def minimax(self):
         """
-        Calculates the minimax value (best achievable utility) for the node.
-
-        Returns
-        -------
-        int
-            Value of the game given a particular move.
-        """
-        # Checks if the game is at a terminal state or exceed depth limit
-        if game.is_winning_move():
-            # Value is +100 if X wins, -100 if O wins
-            AlphaBetaAgent.count += 1
-            #game.display_grid()
-            return 100 - depth if game.curr_move["mark"] == "X" else -100 + depth
-        elif game.is_over():
-            # Value is 0 in case of draw
-            AlphaBetaAgent.count += 1
-            return 0
-        elif depth >= AlphaBetaAgent.DEPTH_LIMIT:
-            # Use evalutaion function to get value if depth limit exceeded
-            AlphaBetaAgent.count += 1
-            return game.get_state_val()
-        
-        if isMax:
-            # Initialise value to large negative number
-            value = -1000
-            
-            # Play through all empty cells
-            for row, col in game.empty_cells:
-                # Create a deep copy of the game and place the mark on the copy
-                game_copy = copy.deepcopy(game)
-                game_copy.place(row, col)
-
-                value = max(value, self.minimax(game_copy, depth+1, not isMax))
-            
-            # Return the max value
-            return value
-        
-        else:
-            # Initialise value to large positive number
-            value = 1000
-            
-            # Play through all empty cells
-            for row, col in game.empty_cells:
-                # Create a deep copy of the game and place the mark on the copy
-                game_copy = copy.deepcopy(game)
-                game_copy.place(row, col)
-
-                value = min(value, self.minimax(game_copy, depth+1, not isMax))
-            
-            # Return the min value
-            return value
-
-    def getBestMove(self):
-        """
-        Calculates the best possible move from the current state of the game.
+        Calculates the best possible move from the current state of the game using minimax search.
 
         Returns
         -------
@@ -81,38 +27,111 @@ class AlphaBetaAgent():
         int
             Minimax value of the above move.
         """
-        bestMoveRow = -1
-        bestMoveCol = -1
-        bestValue = -1000 if self.mark == "X" else 1000
+        row = -1
+        col = -1
+        value = 0
+        if self.mark == "X":
+            row, col, value = self.max_value(self.game, -1000, +1000, 0)
+        else:
+            row, col, value = self.min_value(self.game, -1000, +1000, 0)
 
-        # Traverse all possible moves and evaluate it using minimax
-        for row, col in self.game.empty_cells:
+        return row, col, value
+    
+    def max_value(self, game, alpha, beta, depth):
+        """
+        Calculates the max value from the next possible moves.
+
+        Returns
+        -------
+        int
+            Row number of the best move to make.
+        int 
+            Column number of the best move to make.
+        int
+            Max value of the next moves.
+        """
+        # Checks if the game is at a terminal state or exceed depth limit
+        if game.is_winning_move():
+            # Value is +100 if X wins, -100 if O wins, adjusted for the number of moves to win
+            AlphaBetaAgent.count += 1
+            value = 100 - depth if game.curr_move["mark"] == "X" else -100 + depth
+            return -1, -1, value
+        elif game.is_over():
+            # Value is 0 in case of draw
+            AlphaBetaAgent.count += 1
+            return -1, -1, 0
+        elif depth >= AlphaBetaAgent.DEPTH_LIMIT:
+            # Use evalutaion function to get value if depth limit exceeded
+            AlphaBetaAgent.count += 1
+            return -1, -1, game.get_state_val()
+        
+        value = -1000
+        move_row = -1
+        move_col = -1
+
+        # Play through all empty cells
+        for row, col in game.empty_cells:
             # Create a deep copy of the game and place the mark on the copy
-            game_copy = copy.deepcopy(self.game)
+            game_copy = copy.deepcopy(game)
             game_copy.place(row, col)
 
-            if self.mark == "X":
-                # Play as max if agent is playing X
-                moveValue = self.minimax(game_copy, 1, False)
+            next_row, next_col, next_value = self.min_value(game_copy, alpha, beta, depth+1)
 
-                # Update best move if current move has higher value than the best one
-                if moveValue > bestValue:
-                    bestMoveRow = row
-                    bestMoveCol = col
-                    bestValue = moveValue
+            if next_value > value:
+                value = next_value
+                move_row, move_col = row, col
+                alpha = max(alpha, value)
+            if value >= beta:
+                return move_row, move_col, value
+        return move_row, move_col, value
+    
+    def min_value(self, game, alpha, beta, depth):
+        """
+        Calculates the min value from the next possible moves.
 
-            else:
-                # Play as min if agent is playing O
-                moveValue = self.minimax(game_copy, 1, True)
+        Returns
+        -------
+        int
+            Row number of the best move to make.
+        int 
+            Column number of the best move to make.
+        int
+            Min value of the next moves.
+        """
+        # Checks if the game is at a terminal state or exceed depth limit
+        if game.is_winning_move():
+            # Value is +100 if X wins, -100 if O wins, adjusted for the number of moves to win
+            AlphaBetaAgent.count += 1
+            value = 100 - depth if game.curr_move["mark"] == "X" else -100 + depth
+            return -1, -1, value
+        elif game.is_over():
+            # Value is 0 in case of draw
+            AlphaBetaAgent.count += 1
+            return -1, -1, 0
+        elif depth >= AlphaBetaAgent.DEPTH_LIMIT:
+            # Use evalutaion function to get value if depth limit exceeded
+            AlphaBetaAgent.count += 1
+            return -1, -1, game.get_state_val()
+        
+        value = +1000
+        move_row = -1
+        move_col = -1
 
-                # Update best move if current move has lower value than the best one
-                if moveValue < bestValue:
-                    bestMoveRow = row
-                    bestMoveCol = col
-                    bestValue = moveValue
-            print(moveValue)
+        # Play through all empty cells
+        for row, col in game.empty_cells:
+            # Create a deep copy of the game and place the mark on the copy
+            game_copy = copy.deepcopy(game)
+            game_copy.place(row, col)
 
-        return bestMoveRow, bestMoveCol, bestValue
+            next_row, next_col, next_value = self.max_value(game_copy, alpha, beta, depth+1)
+
+            if next_value < value:
+                value = next_value
+                move_row, move_col = row, col
+                beta = min(beta, value)
+            if value <= alpha:
+                return move_row, move_col, value
+        return move_row, move_col, value
     
     def play(self):
         """
@@ -132,7 +151,7 @@ class AlphaBetaAgent():
         start_time = time.perf_counter()
         success = False
         while not success:
-            row, col, value = self.getBestMove()
+            row, col, value = self.minimax()
             success = self.game.place(row, col, self.mark)
         end_time = time.perf_counter()
         print(f"AlphaBeta agent thought for {end_time-start_time:.3f}s")
@@ -224,8 +243,8 @@ def main():
     """ Test code to play one game with 2 agents """
     game_obj = game.Game()
 
-    playerX = AlphaBetaAgent(game_obj, "X")
-    playerO = HumanAgent(game_obj, "O")
+    playerX = HumanAgent(game_obj, "X")
+    playerO = AlphaBetaAgent(game_obj, "O")
 
     game_over = False
     row = 0
