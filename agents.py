@@ -6,6 +6,24 @@ import game
 class AlphaBetaAgent():
     """
     A class representing an agent that plays based on minimax algorithm with alpha-beta pruning.
+
+    Attributes
+    ----------
+    game : Game
+        The game object containing the grid and the related methods.
+    mark : str
+        The mark the agent is playing as.
+
+    Methods
+    -------
+    minimax()
+        Calculates the best possible move from the current state of the game using minimax search.
+    max_value()
+        Calculates the max value from the next possible moves.
+    min_value()
+        Calculates the min value from the next possible moves.
+    play()
+        Places a move according to the minimax algorithm.
     """
     DEPTH_LIMIT = 4
     count = 0
@@ -200,6 +218,125 @@ class RandomAgent():
             success = self.game.place(row, col, self.mark)
         return (row, col, self.mark)
     
+class NoisyHeuristicAgent():
+    """
+    A class representing a rule-based heuristic agent with a chance of random move.
+    
+    Attributes
+    ----------
+    game : Game
+        The game object containing the grid and the related methods.
+    mark : str
+        The mark the agent is playing as.
+
+    Methods
+    -------
+    play()
+        Places a move according to the rule-based heuristic.
+    getBestMove()
+        Calculates the best move for the current game state using a rule-based heuristic.
+    """
+    NOISE_PERCENT = 20
+
+    def __init__(self, game: game.Game, mark):
+        self.game = game
+        self.mark = mark
+
+    def getBestMove(self):
+        """
+        Calculates the best move for the current game state using a rule-based heuristic.
+
+        Returns
+        -------
+        int
+            Row number of the best move to make.
+        int 
+            Column number of the best move to make.
+        """
+        # Plays a random move with chance NOISE_PERCENT
+        value = random.randint(0,99)
+        if value < NoisyHeuristicAgent.NOISE_PERCENT:
+            print("Playing random move :P")
+            return random.choice(self.game.empty_cells)
+
+        # Moves that leads to a win
+        winning_moves = []
+        # Moves that lead to blocking opponent's win
+        blocking_moves = []
+        # Available moves from the middle ring cells 
+        middle_ring_cells = [(row, col) for row in range(1, 4) for col in range(1, 4)]
+        # Shuffle list for variety of moves
+        random.shuffle(middle_ring_cells)
+
+        # Explore all moves as X
+        for row, col in self.game.empty_cells:
+            # Create a deep copy of the game and place the mark on the copy
+            game_copy = copy.deepcopy(self.game)
+            game_copy.place(row, col, "X")
+
+            # Check if placing X leads to self win or opponent win
+            if game_copy.is_winning_move():
+                if self.mark == "X":
+                    # Self win
+                    winning_moves.append((row, col))
+                else:
+                    # Opponnent win
+                    blocking_moves.append((row, col))
+
+        # Explore all moves as O
+        for row, col in self.game.empty_cells:
+            # Create a deep copy of the game and place the mark on the copy
+            game_copy = copy.deepcopy(self.game)
+            game_copy.place(row, col, "O")
+
+            # Check if placing O leads to self win or opponent win
+            if game_copy.is_winning_move():
+                if self.mark == "O":
+                    # Self win
+                    winning_moves.append((row, col))
+                else:
+                    # Opponnent win
+                    blocking_moves.append((row, col))
+            
+        # 1st priority: win
+        if len(winning_moves) > 0:
+            return winning_moves[0]
+        
+        # 2nd priority: block opponnent win
+        if len(blocking_moves) > 0:
+            return blocking_moves[0]
+        
+        # 3rd priority: centre cells
+        if (2, 2) in self.game.empty_cells:
+            return (2, 2)
+        else:
+            for move in middle_ring_cells:
+                if move in self.game.empty_cells:
+                    return move
+        
+        # Last priorty random move
+        return random.choice(self.game.empty_cells)
+
+    def play(self):
+        """
+        Places a move according to the rule-based heuristic.
+        
+        Returns
+        -------
+        int
+            Row number where the mark is successfully placed.
+        int
+            Column number where the mark is successfully placed.
+        str
+            The mark that is successfully placed.
+        """
+        success = False
+        while not success:
+            row, col = self.getBestMove()
+            success = self.game.place(row, col, self.mark)
+        return (row, col, self.mark)
+
+
 class HumanAgent():
     """
     A class representing a human agent that moves based on human input.
@@ -243,8 +380,8 @@ def main():
     """ Test code to play one game with 2 agents """
     game_obj = game.Game()
 
-    playerX = HumanAgent(game_obj, "X")
-    playerO = AlphaBetaAgent(game_obj, "O")
+    playerX = NoisyHeuristicAgent(game_obj, "X")
+    playerO = NoisyHeuristicAgent(game_obj, "O")
 
     game_over = False
     row = 0
@@ -259,7 +396,7 @@ def main():
             row, col, mark = playerO.play()
 
         print()
-        game_obj.display_cell_val()
+        game_obj.display_grid()
         print(f"Player {mark} placed {mark} in {row}, {col}")
 
         if game_obj.is_winning_move():
