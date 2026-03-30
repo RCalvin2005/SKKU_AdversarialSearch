@@ -26,7 +26,12 @@ class AlphaBetaAgent():
         Places a move according to the minimax algorithm.
     """
     DEPTH_LIMIT = 4
-    count = 0
+    TIME_LIMIT = 3 # seconds
+    # Toggle to turn on time limit
+    TIME_LIMIT_ENFORCED = True
+    TIME_EXCEEDED_CODE = 4444
+    node_count = 0
+    start_time = 0
 
     def __init__(self, game: game.Game, mark):
         self.game = game
@@ -68,19 +73,24 @@ class AlphaBetaAgent():
         int
             Max value of the next moves.
         """
+        # Checks if time limit is exceeded
+        if (time.perf_counter() - AlphaBetaAgent.start_time >= AlphaBetaAgent.TIME_LIMIT and
+            AlphaBetaAgent.TIME_LIMIT_ENFORCED):
+            return -1, -1, AlphaBetaAgent.TIME_EXCEEDED_CODE
+
         # Checks if the game is at a terminal state or exceed depth limit
         if game.is_winning_move():
             # Value is +100 if X wins, -100 if O wins, adjusted for the number of moves to win
-            AlphaBetaAgent.count += 1
+            AlphaBetaAgent.node_count += 1
             value = 100 - depth if game.curr_move["mark"] == "X" else -100 + depth
             return -1, -1, value
         elif game.is_over():
             # Value is 0 in case of draw
-            AlphaBetaAgent.count += 1
+            AlphaBetaAgent.node_count += 1
             return -1, -1, 0
         elif depth >= AlphaBetaAgent.DEPTH_LIMIT:
             # Use evalutaion function to get value if depth limit exceeded
-            AlphaBetaAgent.count += 1
+            AlphaBetaAgent.node_count += 1
             return -1, -1, game.get_state_val()
         
         value = -1000
@@ -116,19 +126,24 @@ class AlphaBetaAgent():
         int
             Min value of the next moves.
         """
+        # Checks if time limit is exceeded
+        if (time.perf_counter() - AlphaBetaAgent.start_time >= AlphaBetaAgent.TIME_LIMIT and
+            AlphaBetaAgent.TIME_LIMIT_ENFORCED):
+            return -1, -1, AlphaBetaAgent.TIME_EXCEEDED_CODE
+        
         # Checks if the game is at a terminal state or exceed depth limit
         if game.is_winning_move():
             # Value is +100 if X wins, -100 if O wins, adjusted for the number of moves to win
-            AlphaBetaAgent.count += 1
+            AlphaBetaAgent.node_count += 1
             value = 100 - depth if game.curr_move["mark"] == "X" else -100 + depth
             return -1, -1, value
         elif game.is_over():
             # Value is 0 in case of draw
-            AlphaBetaAgent.count += 1
+            AlphaBetaAgent.node_count += 1
             return -1, -1, 0
         elif depth >= AlphaBetaAgent.DEPTH_LIMIT:
             # Use evalutaion function to get value if depth limit exceeded
-            AlphaBetaAgent.count += 1
+            AlphaBetaAgent.node_count += 1
             return -1, -1, game.get_state_val()
         
         value = +1000
@@ -165,16 +180,24 @@ class AlphaBetaAgent():
             The mark that is successfully placed.
         """
         print("AlphaBeta agent is thinking...")
-        AlphaBetaAgent.count = 0
-        start_time = time.perf_counter()
+        AlphaBetaAgent.node_count = 0
+        AlphaBetaAgent.start_time = time.perf_counter()
         success = False
         while not success:
             row, col, value = self.minimax()
+            # Chose random move if time limit exceeded
+            if row == -1 and col == -1 and value == AlphaBetaAgent.TIME_EXCEEDED_CODE:
+                row, col = random.choice(self.game.empty_cells)
             success = self.game.place(row, col, self.mark)
-        end_time = time.perf_counter()
-        print(f"AlphaBeta agent thought for {end_time-start_time:.3f}s")
-        print(f"AlphaBeta agent explored {AlphaBetaAgent.count} terminal nodes.")
-        print("Move value:", value)
+
+        if value == AlphaBetaAgent.TIME_EXCEEDED_CODE:
+            print(f"Time limit exceeded after exploring {AlphaBetaAgent.node_count} nodes!")
+            print("Playing random move.")
+        else:
+            end_time = time.perf_counter()
+            print(f"AlphaBeta agent thought for {end_time-AlphaBetaAgent.start_time:.3f}s")
+            print(f"AlphaBeta agent explored {AlphaBetaAgent.node_count} terminal nodes.")
+            print("Move value:", value)
         return (row, col, self.mark)
         
 
@@ -380,8 +403,8 @@ def main():
     """ Test code to play one game with 2 agents """
     game_obj = game.Game()
 
-    playerX = NoisyHeuristicAgent(game_obj, "X")
-    playerO = NoisyHeuristicAgent(game_obj, "O")
+    playerX = AlphaBetaAgent(game_obj, "X")
+    playerO = AlphaBetaAgent(game_obj, "O")
 
     game_over = False
     row = 0
