@@ -56,8 +56,18 @@ class Game:
         
         self.curr_move = {"row": 0, "col": 0, "mark": " "}
 
-        self.empty_cells = [(row, col)
-                            for row in range(Game.GRID_SIZE) for col in range(Game.GRID_SIZE)]
+        # Empty cells not ordered
+        # self.empty_cells = [(row, col)
+        #                     for row in range(Game.GRID_SIZE) for col in range(Game.GRID_SIZE)]
+        
+        # Empty cells ordered from centre outwards for move ordering to reduce time for minimax
+        self.empty_cells = [
+            (2, 2), (1, 1), (1, 2), (1, 3), (2, 1),
+            (2, 3), (3, 1), (3, 2), (3, 3), (0, 0),
+            (0, 1), (0, 2), (0, 3), (0, 4), (1, 0),
+            (1, 4), (2, 0), (2, 4), (3, 0), (3, 4),
+            (4, 0), (4, 1), (4, 2), (4, 3), (4, 4)
+        ]
         
         self.turn_num = 0
         
