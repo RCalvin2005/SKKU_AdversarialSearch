@@ -14,6 +14,8 @@ class Agent(ABC):
         The game object containing the grid and the related methods.
     mark : str
         The mark the agent is playing as.
+    label : str
+        Label of the agent when used for printing/logging.
 
     Methods
     -------
@@ -25,6 +27,7 @@ class Agent(ABC):
     def __init__(self, game: game.Game, mark):
         self.game = game
         self.mark = mark
+        self.label = ""
 
     @abstractmethod
     def play():
@@ -44,6 +47,8 @@ class AlphaBetaAgent(Agent):
         Value of the most recent move.
     time_limit_exceeded : bool
         Used to check if time limit was exceeded
+    move_comp_time :
+        Time in seconds agent spent computing for the most recent move.
     total_comp_time : float
         Total time in seconds agent spent computing throughout the entire game.
     start_time : float (Class Variable)
@@ -83,7 +88,7 @@ class AlphaBetaAgent(Agent):
     TIME_LIMIT_ENFORCED = True # Toggle to turn on time limit
     
     time_limit_exceeded = False # Code value used to check if time limit was exceeded.
-    
+
     # Class variable for easy syncing across recursion calls
     # Warning: Computational time and node count is inaccurate when playing multiple
     # AlphaBeta Agents simultaneously
@@ -91,10 +96,20 @@ class AlphaBetaAgent(Agent):
     move_node_count = 0 # Node count per move
     total_node_count = 0 # Total node count across entire game
 
-    def __init__(self, game: game.Game, mark):
+    def __init__(self, game: game.Game, mark, depth_limit=None, enforce_time=None):
         super().__init__(game, mark)
+        self.label = "AlphaBetaAgent"
+
+        # Override depth limit and time limit if provided
+        if depth_limit is not None:
+            AlphaBetaAgent.DEPTH_LIMIT = depth_limit
+        if enforce_time is not None:
+            AlphaBetaAgent.TIME_LIMIT_ENFORCED = enforce_time
+
         # Value of the most recent move
         self.move_value = 0
+        # Computational time for the most recent move
+        self.move_comp_time = 0
         # Total computational time across the game
         self.total_comp_time = 0
 
@@ -251,7 +266,8 @@ class AlphaBetaAgent(Agent):
             True if a random move was played due to the time limit.
         """
         print("AlphaBeta agent is thinking...")
-
+        
+        self.move_comp_time = 0
         AlphaBetaAgent.time_limit_exceeded = False
         AlphaBetaAgent.move_node_count = 0
         AlphaBetaAgent.start_time = time.perf_counter()
@@ -265,15 +281,15 @@ class AlphaBetaAgent(Agent):
             success = self.game.place(row, col, self.mark)
 
         end_time = time.perf_counter()
-        comp_time = end_time-AlphaBetaAgent.start_time
+        self.move_comp_time = end_time-AlphaBetaAgent.start_time
 
         AlphaBetaAgent.total_node_count += AlphaBetaAgent.move_node_count
-        self.total_comp_time += comp_time
+        self.total_comp_time += self.move_comp_time
 
         if AlphaBetaAgent.time_limit_exceeded:
             print(f"Time limit exceeded after exploring {AlphaBetaAgent.move_node_count} nodes!")
         else:
-            print(f"AlphaBeta agent thought for {comp_time:.3f}s")
+            print(f"AlphaBeta agent thought for {self.move_comp_time:.3f}s")
             print(f"AlphaBeta agent explored {AlphaBetaAgent.move_node_count} terminal nodes.")
             print("Move value:", self.move_value)
 
@@ -302,6 +318,7 @@ class RandomAgent(Agent):
 
     def __init__(self, game: game.Game, mark):
         super().__init__(game, mark)
+        self.label = "RandomAgent"
 
     def play(self):
         """
@@ -346,6 +363,7 @@ class NoisyHeuristicAgent(Agent):
 
     def __init__(self, game: game.Game, mark):
         super().__init__(game, mark)
+        self.label = "NoisyHeuristicAgent"
 
     def getBestMove(self):
         """
@@ -463,6 +481,7 @@ class HumanAgent(Agent):
     """
     def __init__(self, game: game.Game, mark):
         super().__init__(game, mark)
+        self.label = "HumanAgent"
 
     def play(self):
         """
