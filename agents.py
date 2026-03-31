@@ -13,6 +13,29 @@ class AlphaBetaAgent():
         The game object containing the grid and the related methods.
     mark : str
         The mark the agent is playing as.
+    total_comp_time : float
+        Total time in seconds agent spent computing throughout the entire game.
+    start_time : float (Class Variable)
+        Starting time before minimax is executed.
+    move_node_count : int (Class Variable)
+        Number of nodes explored per move.
+    total_node_count : int (Class Variable)
+        Total number of nodes explored throughout the game.
+    DEPTH_LIMIT : int
+        The depth to which minimax search is performed.
+    TIME_LIMIT : float
+        Time in seconds minimax is allowed to compute before falling back to a random move.
+    TIME_LIMIT_ENFORCED : bool
+        Toggle for whether the above time limit is enforced or not.
+    TIME_EXCEEDED_CODE : int
+        Code value used to check if time limit was exceeded.
+
+    Notes
+    -----
+    The above class variables are used for easy syncing across the many recursion calls in
+    minimax search. As they are class variables, the computational time and node count is
+    inaccurate when multiple AlphaBetaAgents are playing in the same game as the values
+    are shared across the 2 agents.
 
     Methods
     -------
@@ -26,16 +49,28 @@ class AlphaBetaAgent():
         Places a move according to the minimax algorithm.
     """
     DEPTH_LIMIT = 4
+    
     TIME_LIMIT = 3 # seconds
-    # Toggle to turn on time limit
-    TIME_LIMIT_ENFORCED = True
-    TIME_EXCEEDED_CODE = 4444
-    node_count = 0
+    TIME_LIMIT_ENFORCED = True # Toggle to turn on time limit
+    TIME_EXCEEDED_CODE = 4444 # Code value used to check if time limit was exceeded.
+    
+    # Class variable for easy syncing across recursion calls
+    # Warning: Computational time and node count is inaccurate when playing multiple
+    # AlphaBeta Agents simultaneously
     start_time = 0
+    move_node_count = 0 # Node count per move
+    total_node_count = 0 # Total node count across entire game
 
     def __init__(self, game: game.Game, mark):
         self.game = game
         self.mark = mark
+        # Total computational time across the game
+        self.total_comp_time = 0
+
+        # Reset class variables
+        AlphaBetaAgent.start_time = 0
+        AlphaBetaAgent.move_node_count = 0
+        AlphaBetaAgent.total_node_count = 0
 
     def minimax(self):
         """
@@ -81,16 +116,16 @@ class AlphaBetaAgent():
         # Checks if the game is at a terminal state or exceed depth limit
         if game.is_winning_move():
             # Value is +100 if X wins, -100 if O wins, adjusted for the number of moves to win
-            AlphaBetaAgent.node_count += 1
+            AlphaBetaAgent.move_node_count += 1
             value = 100 - depth if game.curr_move["mark"] == "X" else -100 + depth
             return -1, -1, value
         elif game.is_over():
             # Value is 0 in case of draw
-            AlphaBetaAgent.node_count += 1
+            AlphaBetaAgent.move_node_count += 1
             return -1, -1, 0
         elif depth >= AlphaBetaAgent.DEPTH_LIMIT:
             # Use evalutaion function to get value if depth limit exceeded
-            AlphaBetaAgent.node_count += 1
+            AlphaBetaAgent.move_node_count += 1
             return -1, -1, game.get_state_val()
         
         value = -1000
@@ -134,16 +169,16 @@ class AlphaBetaAgent():
         # Checks if the game is at a terminal state or exceed depth limit
         if game.is_winning_move():
             # Value is +100 if X wins, -100 if O wins, adjusted for the number of moves to win
-            AlphaBetaAgent.node_count += 1
+            AlphaBetaAgent.move_node_count += 1
             value = 100 - depth if game.curr_move["mark"] == "X" else -100 + depth
             return -1, -1, value
         elif game.is_over():
             # Value is 0 in case of draw
-            AlphaBetaAgent.node_count += 1
+            AlphaBetaAgent.move_node_count += 1
             return -1, -1, 0
         elif depth >= AlphaBetaAgent.DEPTH_LIMIT:
             # Use evalutaion function to get value if depth limit exceeded
-            AlphaBetaAgent.node_count += 1
+            AlphaBetaAgent.move_node_count += 1
             return -1, -1, game.get_state_val()
         
         value = +1000
@@ -180,7 +215,7 @@ class AlphaBetaAgent():
             The mark that is successfully placed.
         """
         print("AlphaBeta agent is thinking...")
-        AlphaBetaAgent.node_count = 0
+        AlphaBetaAgent.move_node_count = 0
         AlphaBetaAgent.start_time = time.perf_counter()
         success = False
         while not success:
@@ -190,14 +225,24 @@ class AlphaBetaAgent():
                 row, col = random.choice(self.game.empty_cells)
             success = self.game.place(row, col, self.mark)
 
+        end_time = time.perf_counter()
+        comp_time = end_time-AlphaBetaAgent.start_time
+
+        AlphaBetaAgent.total_node_count += AlphaBetaAgent.move_node_count
+        self.total_comp_time += comp_time
+
         if value == AlphaBetaAgent.TIME_EXCEEDED_CODE:
-            print(f"Time limit exceeded after exploring {AlphaBetaAgent.node_count} nodes!")
+            print(f"Time limit exceeded after exploring {AlphaBetaAgent.move_node_count} nodes!")
             print("Playing random move.")
         else:
-            end_time = time.perf_counter()
-            print(f"AlphaBeta agent thought for {end_time-AlphaBetaAgent.start_time:.3f}s")
-            print(f"AlphaBeta agent explored {AlphaBetaAgent.node_count} terminal nodes.")
+            
+            print(f"AlphaBeta agent thought for {comp_time:.3f}s")
+            print(f"AlphaBeta agent explored {AlphaBetaAgent.move_node_count} terminal nodes.")
             print("Move value:", value)
+
+        print()
+        print(f"Total computational time: {self.total_comp_time:.3f}s")
+        print("Total nodes explored:", AlphaBetaAgent.total_node_count)
         return (row, col, self.mark)
         
 
@@ -403,7 +448,7 @@ def main():
     """ Test code to play one game with 2 agents """
     game_obj = game.Game()
 
-    playerX = AlphaBetaAgent(game_obj, "X")
+    playerX = RandomAgent(game_obj, "X")
     playerO = AlphaBetaAgent(game_obj, "O")
 
     game_over = False
