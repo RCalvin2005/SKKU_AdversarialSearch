@@ -18,6 +18,8 @@ class Game:
         An array containing the remaining empty (row, col) cells.
     turn_num : int
         The current turn number of the game.
+    winner : str
+        Winner of the game (X, O, or Draw).
     
     Methods
     -------
@@ -70,6 +72,7 @@ class Game:
         ]
         
         self.turn_num = 0
+        self.winner = ""
         
     def place(self, row, col, mark=None):
         """
@@ -203,14 +206,19 @@ class Game:
             True if the last current was a winning move, False otherwise.
         """
         # Check if there is at least 4 in a row in any of the directions
+        winning_move = False
         curr_cell = self.grid[self.curr_move["row"]][self.curr_move["col"]]
         if curr_cell.horz_val >= Game.WIN_N_IN_LINE:
-            return True
+            winning_move = True
         if curr_cell.vert_val >= Game.WIN_N_IN_LINE:
-            return True
+            winning_move = True
         if curr_cell.down_diag_val >= Game.WIN_N_IN_LINE:
-            return True
+            winning_move = True
         if curr_cell.up_diag_val >= Game.WIN_N_IN_LINE:
+            winning_move = True
+
+        if winning_move:
+            self.winner = self.curr_move["mark"]
             return True
         return False
     
@@ -223,6 +231,7 @@ class Game:
         bool
             Returns true is the game is over (no remaining empty cells).
         """
+        self.winner = "Draw"
         return len(self.empty_cells) == 0
     
     def get_state_val(self):
