@@ -2,8 +2,35 @@ import random
 import copy
 import time
 import game
+from abc import ABC, abstractmethod
 
-class AlphaBetaAgent():
+class Agent(ABC):
+    """
+    An Abstract Base Class parent representing a agent playing the Tic-Tac-Toe game.
+
+    Attributes:
+    -----------
+    game : Game
+        The game object containing the grid and the related methods.
+    mark : str
+        The mark the agent is playing as.
+
+    Methods
+    -------
+    play()
+        Plays a single move for the game. To be implemented by each child separately and
+        return the (row, col, mark, random_status) that was placed.
+    """
+
+    def __init__(self, game: game.Game, mark):
+        self.game = game
+        self.mark = mark
+
+    @abstractmethod
+    def play():
+        return
+
+class AlphaBetaAgent(Agent):
     """
     A class representing an agent that plays based on minimax algorithm with alpha-beta pruning.
 
@@ -13,6 +40,10 @@ class AlphaBetaAgent():
         The game object containing the grid and the related methods.
     mark : str
         The mark the agent is playing as.
+    move_value : int
+        Value of the most recent move.
+    time_limit_exceeded : bool
+        Used to check if time limit was exceeded
     total_comp_time : float
         Total time in seconds agent spent computing throughout the entire game.
     start_time : float (Class Variable)
@@ -27,8 +58,6 @@ class AlphaBetaAgent():
         Time in seconds minimax is allowed to compute before falling back to a random move.
     TIME_LIMIT_ENFORCED : bool
         Toggle for whether the above time limit is enforced or not.
-    TIME_EXCEEDED_CODE : int
-        Code value used to check if time limit was exceeded.
 
     Notes
     -----
@@ -52,7 +81,8 @@ class AlphaBetaAgent():
     
     TIME_LIMIT = 3 # seconds
     TIME_LIMIT_ENFORCED = True # Toggle to turn on time limit
-    TIME_EXCEEDED_CODE = 4444 # Code value used to check if time limit was exceeded.
+    
+    time_limit_exceeded = False # Code value used to check if time limit was exceeded.
     
     # Class variable for easy syncing across recursion calls
     # Warning: Computational time and node count is inaccurate when playing multiple
@@ -62,12 +92,14 @@ class AlphaBetaAgent():
     total_node_count = 0 # Total node count across entire game
 
     def __init__(self, game: game.Game, mark):
-        self.game = game
-        self.mark = mark
+        super().__init__(game, mark)
+        # Value of the most recent move
+        self.move_value = 0
         # Total computational time across the game
         self.total_comp_time = 0
 
         # Reset class variables
+        AlphaBetaAgent.time_limit_exceeded = False
         AlphaBetaAgent.start_time = 0
         AlphaBetaAgent.move_node_count = 0
         AlphaBetaAgent.total_node_count = 0
@@ -111,7 +143,8 @@ class AlphaBetaAgent():
         # Checks if time limit is exceeded
         if (time.perf_counter() - AlphaBetaAgent.start_time >= AlphaBetaAgent.TIME_LIMIT and
             AlphaBetaAgent.TIME_LIMIT_ENFORCED):
-            return -1, -1, AlphaBetaAgent.TIME_EXCEEDED_CODE
+            AlphaBetaAgent.time_limit_exceeded = True
+            return -1, -1, 0
 
         # Checks if the game is at a terminal state or exceed depth limit
         if game.is_winning_move():
@@ -164,7 +197,8 @@ class AlphaBetaAgent():
         # Checks if time limit is exceeded
         if (time.perf_counter() - AlphaBetaAgent.start_time >= AlphaBetaAgent.TIME_LIMIT and
             AlphaBetaAgent.TIME_LIMIT_ENFORCED):
-            return -1, -1, AlphaBetaAgent.TIME_EXCEEDED_CODE
+            AlphaBetaAgent.time_limit_exceeded = True
+            return -1, -1, 0
         
         # Checks if the game is at a terminal state or exceed depth limit
         if game.is_winning_move():
@@ -213,15 +247,20 @@ class AlphaBetaAgent():
             Column number where the mark is successfully placed.
         str
             The mark that is successfully placed.
+        bool
+            True if a random move was played due to the time limit.
         """
         print("AlphaBeta agent is thinking...")
+
+        AlphaBetaAgent.time_limit_exceeded = False
         AlphaBetaAgent.move_node_count = 0
         AlphaBetaAgent.start_time = time.perf_counter()
+
         success = False
         while not success:
-            row, col, value = self.minimax()
+            row, col, self.move_value = self.minimax()
             # Chose random move if time limit exceeded
-            if row == -1 and col == -1 and value == AlphaBetaAgent.TIME_EXCEEDED_CODE:
+            if AlphaBetaAgent.time_limit_exceeded:
                 row, col = random.choice(self.game.empty_cells)
             success = self.game.place(row, col, self.mark)
 
@@ -231,22 +270,20 @@ class AlphaBetaAgent():
         AlphaBetaAgent.total_node_count += AlphaBetaAgent.move_node_count
         self.total_comp_time += comp_time
 
-        if value == AlphaBetaAgent.TIME_EXCEEDED_CODE:
+        if AlphaBetaAgent.time_limit_exceeded:
             print(f"Time limit exceeded after exploring {AlphaBetaAgent.move_node_count} nodes!")
-            print("Playing random move.")
         else:
-            
             print(f"AlphaBeta agent thought for {comp_time:.3f}s")
             print(f"AlphaBeta agent explored {AlphaBetaAgent.move_node_count} terminal nodes.")
-            print("Move value:", value)
+            print("Move value:", self.move_value)
 
         print()
         print(f"Total computational time: {self.total_comp_time:.3f}s")
         print("Total nodes explored:", AlphaBetaAgent.total_node_count)
-        return (row, col, self.mark)
+        return (row, col, self.mark, AlphaBetaAgent.time_limit_exceeded)
         
 
-class RandomAgent():
+class RandomAgent(Agent):
     """
     A class representing a player that picks a random empty cell.
 
@@ -264,8 +301,7 @@ class RandomAgent():
     """
 
     def __init__(self, game: game.Game, mark):
-        self.game = game
-        self.mark = mark
+        super().__init__(game, mark)
 
     def play(self):
         """
@@ -279,14 +315,16 @@ class RandomAgent():
             Column number where the mark is successfully placed.
         str
             The mark that is successfully placed.
+        bool
+            True (agent always plays random moves as intended).
         """
         success = False
         while not success:
             row, col = random.choice(self.game.empty_cells)
             success = self.game.place(row, col, self.mark)
-        return (row, col, self.mark)
+        return (row, col, self.mark, True)
     
-class NoisyHeuristicAgent():
+class NoisyHeuristicAgent(Agent):
     """
     A class representing a rule-based heuristic agent with a chance of random move.
     
@@ -307,8 +345,7 @@ class NoisyHeuristicAgent():
     NOISE_PERCENT = 20
 
     def __init__(self, game: game.Game, mark):
-        self.game = game
-        self.mark = mark
+        super().__init__(game, mark)
 
     def getBestMove(self):
         """
@@ -320,12 +357,13 @@ class NoisyHeuristicAgent():
             Row number of the best move to make.
         int 
             Column number of the best move to make.
+        bool
+            True if a random move was played due to the noise.
         """
         # Plays a random move with chance NOISE_PERCENT
         value = random.randint(0,99)
         if value < NoisyHeuristicAgent.NOISE_PERCENT:
-            print("Playing random move :P")
-            return random.choice(self.game.empty_cells)
+            return random.choice(self.game.empty_cells) + (True,) 
 
         # Moves that leads to a win
         winning_moves = []
@@ -368,22 +406,22 @@ class NoisyHeuristicAgent():
             
         # 1st priority: win
         if len(winning_moves) > 0:
-            return winning_moves[0]
+            return winning_moves[0] + (False,) 
         
         # 2nd priority: block opponnent win
         if len(blocking_moves) > 0:
-            return blocking_moves[0]
+            return blocking_moves[0] + (False,)
         
         # 3rd priority: centre cells
         if (2, 2) in self.game.empty_cells:
-            return (2, 2)
+            return (2, 2, False)
         else:
             for move in middle_ring_cells:
                 if move in self.game.empty_cells:
-                    return move
+                    return move + (False,)
         
         # Last priorty random move
-        return random.choice(self.game.empty_cells)
+        return random.choice(self.game.empty_cells) + (False,)
 
     def play(self):
         """
@@ -397,15 +435,17 @@ class NoisyHeuristicAgent():
             Column number where the mark is successfully placed.
         str
             The mark that is successfully placed.
+        bool
+            True if a random move was played due to the noise.
         """
         success = False
         while not success:
-            row, col = self.getBestMove()
+            row, col, played_random = self.getBestMove()
             success = self.game.place(row, col, self.mark)
-        return (row, col, self.mark)
+        return (row, col, self.mark, played_random)
 
 
-class HumanAgent():
+class HumanAgent(Agent):
     """
     A class representing a human agent that moves based on human input.
 
@@ -422,8 +462,7 @@ class HumanAgent():
         Places a move according to the input provided.
     """
     def __init__(self, game: game.Game, mark):
-        self.game = game
-        self.mark = mark
+        super().__init__(game, mark)
 
     def play(self):
         """
@@ -437,19 +476,21 @@ class HumanAgent():
             Column number where the mark is successfully placed.
         str
             The mark that is successfully placed.
+        bool
+            False (agent plays as intended).
         """
         success = False
         while not success:
             row, col = map(int, input(f"Input where to place {self.mark} in format row,col: ").split(","))
             success = self.game.place(row, col, self.mark)
-        return (row, col, self.mark)
+        return (row, col, self.mark, False)
 
 def main():
     """ Test code to play one game with 2 agents """
     game_obj = game.Game()
 
-    playerX = RandomAgent(game_obj, "X")
-    playerO = AlphaBetaAgent(game_obj, "O")
+    playerX = AlphaBetaAgent(game_obj, "X")
+    playerO = RandomAgent(game_obj, "O")
 
     game_over = False
     row = 0
@@ -459,12 +500,14 @@ def main():
     print("-"*75)
     while not game_over:
         if game_obj.turn_num % 2 == 0:
-            row, col, mark = playerX.play()
+            row, col, mark, played_random = playerX.play()
         else:
-            row, col, mark = playerO.play()
+            row, col, mark, played_random = playerO.play()
 
         print()
         game_obj.display_grid()
+        if played_random:
+            print("A random move was played!")
         print(f"Player {mark} placed {mark} in {row}, {col}")
 
         if game_obj.is_winning_move():
