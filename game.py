@@ -301,6 +301,55 @@ class Game:
             print("+" + "---------+"*Game.GRID_SIZE)
 
         return
+    
+    def format_grid_str(self):
+        """
+        Formats current state of the grid to a single str for logging.
+
+        Returns
+        -------
+        str
+            The full grid in a single str.
+        """
+        grid_str = ("+" + "---+"*Game.GRID_SIZE + "\n")
+        for row in self.grid:
+            grid_str += ("| " + " | ".join(cell.mark for cell in row) + " |\n")
+            grid_str += ("+" + "---+"*Game.GRID_SIZE + "\n")
+        return grid_str
+    
+    def format_cell_val_str(self):
+        """
+        Formats the current grid with all the cell values into a single str
+        Top left:       n-in-a-row
+        Top centre:     centre proximity
+        Top right:      n-in-a-column
+        Bottom left:    n-in-downward-diagonal
+        Bottom centre:  total value
+        Bottom right:   n-in-upward-diagonal     
+        Example:    
+        +---------+
+        |1   1   1|
+        |    X    |
+        |1  +11  1|
+        +---------+
+
+        Returns
+        -------
+        str
+            The full grid with cell values in a single str.
+        """
+        grid_str = ("+" + "---------+"*Game.GRID_SIZE + "\n")
+        for row in self.grid:
+            line1 = "|"
+            line2 = "|"
+            line3 = "|"
+            for cell in row:
+                line1 += f"{cell.horz_val}   {cell.centre_prox}   {cell.vert_val}|"
+                line2 += f"    {cell.mark}    |"
+                line3 += f"{cell.down_diag_val} {cell.get_value():+3}   {cell.up_diag_val}|"
+            grid_str += (line1 + "\n" + line2 + "\n" + line3 + "\n")
+            grid_str += ("+" + "---------+"*Game.GRID_SIZE + "\n")
+        return grid_str
 
 class Cell:
     """
@@ -388,7 +437,8 @@ def main():
         print(f"Placing {move[2]} in row {move[0]}, col {move[1]}.")
         success = game.place(move[0], move[1], move[2])
         print()
-        game.display_cell_val()
+        print(game.format_cell_val_str())
+        #game.display_cell_val()
         print()
         
         if success:
