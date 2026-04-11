@@ -445,10 +445,7 @@ def main():
     for move in sequence:
         print(f"Placing {move[2]} in row {move[0]}, col {move[1]}.")
         success = game.place(move[0], move[1], move[2])
-        print()
-        print(game.format_cell_val_str())
-        #game.display_cell_val()
-        print()
+        game.display_cell_val()
         
         if success:
             print(f"Sucessfully placed {move[2]} in row {move[0]}, col {move[1]}.")

@@ -13,11 +13,11 @@ def main():
     """
     GAMES_PER_ROUND = 10
 
-    DEPTH_LIMIT = 5
+    DEPTH_LIMIT = 4
     ENFORCE_TIME_LIMIT = True
 
-    summary_file = "summary"
-    log_folder = "./logs_depth_5"
+    summary_file = "summary" # Name of the file containing the summary of all games
+    log_folder = "./logs/"
     os.makedirs(log_folder, exist_ok=True)
 
     # Game metrics
@@ -30,7 +30,7 @@ def main():
 
     # Play 10 games where AlphaBeta Agent plays as X (first player) against RandomAgent
     for i in range(GAMES_PER_ROUND):
-        log_file = f"{log_folder}/Game_{i}_AlphaBeta_vs_Random.txt"
+        log_file = f"{log_folder}Game_{i}_AlphaBeta_vs_Random.txt"
         file_headline = f"Game {i+1}: AlphaBetaAgent (X) vs RandomAgent (O)"
 
         random.seed(i)
@@ -45,7 +45,7 @@ def main():
 
     # Play 10 games where AlphaBeta Agent plays as O (second player) against RandomAgent
     for i in range(GAMES_PER_ROUND):
-        log_file = f"{log_folder}/Game_{i + GAMES_PER_ROUND*1}_Random_vs_AlphaBeta.txt"
+        log_file = f"{log_folder}Game_{i + GAMES_PER_ROUND*1}_Random_vs_AlphaBeta.txt"
         file_headline = f"Game {i+1}: RandomAgent (X) vs AlphaBetaAgent (O)"
 
         random.seed(i)
@@ -60,7 +60,7 @@ def main():
 
     # Play 10 games where AlphaBeta Agent plays as X (first player) against RandomAgent
     for i in range(GAMES_PER_ROUND):
-        log_file = f"{log_folder}/Game_{i + GAMES_PER_ROUND*2}_AlphaBeta_vs_Heuristic.txt"
+        log_file = f"{log_folder}Game_{i + GAMES_PER_ROUND*2}_AlphaBeta_vs_Heuristic.txt"
         file_headline = f"Game {i+1}: AlphaBetaAgent (X) vs NoisyHeuristicAgent (O)"
 
         random.seed(i)
@@ -75,7 +75,7 @@ def main():
 
     # Play 10 games where AlphaBeta Agent plays as O (second player) against RandomAgent
     for i in range(GAMES_PER_ROUND):
-        log_file = f"{log_folder}/Game_{i + GAMES_PER_ROUND*3}_Heuristic_vs_AlphaBeta.txt"
+        log_file = f"{log_folder}Game_{i + GAMES_PER_ROUND*3}_Heuristic_vs_AlphaBeta.txt"
         file_headline = f"Game {i+1}: NoisyHeuristicAgent (X) vs AlphaBetaAgent (O)"
 
         random.seed(i)
@@ -91,6 +91,8 @@ def main():
     print("\n")
     save_csv(metrics, log_folder+summary_file+".csv")
     save_summary(metrics, GAMES_PER_ROUND, log_folder+summary_file+".txt")
+
+    print(f"Please refer to the log files in {log_folder} for summary and detailed log of each game.")
 
     return
 
